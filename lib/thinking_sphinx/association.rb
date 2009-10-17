@@ -66,7 +66,7 @@ module ThinkingSphinx
         @reflection, base_join, parent ? parent.join : base_join.joins.first
       )
 
-      @join.aliased_table_name << '_temp' if is_many? and !(@join.aliased_table_name =~ /_temp$/)
+      @join.aliased_table_name << '_join' if is_many? and !(@join.aliased_table_name =~ /_join$/)
     end
 
     def column_def_sql(column_name)
@@ -86,7 +86,7 @@ module ThinkingSphinx
       primary_key = quote_column(@reflection.primary_key_name)
       temp_table_name = quote_table_name(@join.aliased_table_name)
 
-      create = "CREATE TEMPORARY TABLE %s (%s, PRIMARY KEY (%s)); " % [
+      create = "CREATE TEMPORARY TABLE %s (%s, PRIMARY KEY (%s))" % [
         temp_table_name,
         (columns.uniq.map(&:__name) << @reflection.primary_key_name).map { |column| column_def_sql(column) }.join(', '),
         primary_key
