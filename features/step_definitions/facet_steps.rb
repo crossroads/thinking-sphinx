@@ -1,4 +1,4 @@
-When "I am requesting facet results$" do
+When /^I am requesting facet results$/ do
   @results = nil
   @method  = :facets
 end
@@ -85,6 +85,10 @@ Then /^the ([\w_\s]+) facet should have an? (\d+\.?\d*) key$/ do |name, key|
   end
   
   results[facet_name(name)].keys.should include(key)
+end
+
+Then /^the ([\w\s]+) facet should have (\d+) keys$/ do |name, count|
+  results[facet_name(name)].keys.length.should == count.to_i
 end
 
 def facet_name(string)

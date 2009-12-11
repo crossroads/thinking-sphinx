@@ -101,14 +101,14 @@ module ThinkingSphinx
         when :datetime
           adapter.cast_to_datetime(part)
         when :multi
-          part = adapter.cast_to_datetime(part) if is_many_datetimes?
-          adapter.convert_nulls(part, 0)
+          part = adapter.cast_to_datetime(part)   if is_many_datetimes?
+          part = adapter.convert_nulls(part, '0') if is_many_ints?
+          part
         else
           part
         end
       }.join(', ')
 
-      # clause = adapter.cast_to_datetime(clause)             if type == :datetime
       clause = adapter.crc(clause)                          if @crc
       clause = adapter.concatenate(clause, separator)       if concat_ws?
 
@@ -179,7 +179,7 @@ module ThinkingSphinx
       object = instance
       column = @columns.first
       column.__stack.each { |method| object = object.send(method) }
-      object.send(column.__name)
+      sphinx_value object.send(column.__name)
     end
 
     def all_ints?
@@ -335,6 +335,21 @@ block:
           !column.nil? && column_types.include?(column.type)
         }
       }
+    end
+
+    def sphinx_value(value)
+      case value
+      when TrueClass
+        1
+      when FalseClass, NilClass
+        0
+      when Time
+        value.to_i
+      when Date
+        value.to_time.to_i
+      else
+        value
+      end
     end
   end
 end
