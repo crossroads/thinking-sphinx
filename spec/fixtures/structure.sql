@@ -16,6 +16,8 @@ CREATE TABLE `people` (
   `team_type` varchar(50) NULL,
   `type` varchar(50) NULL,
   `parent_id` varchar(50) NULL,
+  `source_id` int(11) NULL,
+  `source_type` varchar(50) NULL,
   `delta` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY  (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -90,6 +92,16 @@ CREATE TABLE `gammas` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS `thetas`;
+
+CREATE TABLE `thetas` (
+  `id` int(11) NOT NULL auto_increment,
+  `name` varchar(50) NOT NULL,
+  `value` int(11),
+  `alpha_id` int(11),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 DROP TABLE IF EXISTS `searches`;
 
 CREATE TABLE `searches` (
@@ -123,4 +135,12 @@ DROP TABLE IF EXISTS `links_people`;
 CREATE TABLE `links_people` (
   `link_id` int(11) NOT NULL,
   `person_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `big_foos`;
+
+CREATE TABLE `big_foos` (
+  `id` bigint NOT NULL auto_increment,
+  `name` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

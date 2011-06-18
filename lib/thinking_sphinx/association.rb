@@ -46,13 +46,8 @@ module ThinkingSphinx
 
       # association is polymorphic - create associations for each
       # non-polymorphic reflection.
-      polymorphic_classes(ref).collect { |klass|
-        Association.new parent, ::ActiveRecord::Reflection::AssociationReflection.new(
-          ref.macro,
-          "#{ref.name}_#{klass.name}".to_sym,
-          casted_options(klass, ref),
-          ref.active_record
-        )
+      polymorphic_classes(ref).collect { |poly_class|
+        Association.new parent, depolymorphic_reflection(ref, klass, poly_class)
       }
     end
 
@@ -122,20 +117,7 @@ module ThinkingSphinx
     # join conditions avoid column name collisions.
     #
     def to_sql
-      if is_many?
-        temp_table_name = quote_table_name(@join.aliased_table_name)
-        " LEFT OUTER JOIN %s ON %s.%s = %s.%s" % [
-          temp_table_name,
-          temp_table_name,
-          quote_column(@reflection.primary_key_name),
-          quote_table_name(@join.parent.aliased_table_name),
-          quote_column(@join.parent.primary_key)
-        ]
-      else
-        @join.association_join.gsub(/::ts_join_alias::/,
-          "#{@reflection.klass.connection.quote_table_name(@join.parent.aliased_table_name)}"
-        )
-      end
+      rewrite_conditions
     end
 
     # Returns true if the association - or a parent - is a has_many or
@@ -200,6 +182,16 @@ module ThinkingSphinx
 
     private
 
+    def self.depolymorphic_reflection(reflection, source_class, poly_class)
+      name = "#{reflection.name}_#{poly_class.name}".to_sym
+
+      source_class.reflect_on_association(name) ||
+      ::ActiveRecord::Reflection::AssociationReflection.new(
+        reflection.macro, name, casted_options(poly_class, reflection),
+        reflection.active_record
+      )
+    end
+
     # Returns all the objects that could be currently instantiated from a
     # polymorphic association. This is pretty damn fast if there's an index on
     # the foreign type column - but if there isn't, it can take a while if you
@@ -238,6 +230,39 @@ module ThinkingSphinx
       end
 
       options
+    end
+
+    def rewrite_conditions
+      if is_many?
+        temp_table_name = quote_table_name(@join.aliased_table_name)
+        " LEFT OUTER JOIN %s ON %s.%s = %s.%s" % [
+          temp_table_name,
+          temp_table_name,
+          quote_column(@reflection.primary_key_name),
+          quote_table_name(@join.parent.aliased_table_name),
+          quote_column(@join.parent.primary_key)
+        ]
+      else
+        rewrite_condition @join.association_join
+      end
+    end
+
+    def rewrite_condition(condition)
+      return condition unless condition.is_a?(String)
+
+      if defined?(ActsAsTaggableOn) &&
+        @reflection.klass == ActsAsTaggableOn::Tagging &&
+        @reflection.name.to_s[/_taggings$/]
+        condition = condition.gsub /taggings\./, "#{quoted_alias @join}."
+      end
+
+      condition.gsub /::ts_join_alias::/, quoted_alias(@join.parent)
+    end
+
+    def quoted_alias(join)
+      @reflection.klass.connection.quote_table_name(
+        join.aliased_table_name
+      )
     end
   end
 end

@@ -19,6 +19,8 @@ module ThinkingSphinx
     # - :sortable => true
     # - :infixes  => true
     # - :prefixes => true
+    # - :file     => true
+    # - :with     => :attribute # or :wordcount
     #
     # Alias is only required in three circumstances: when there's
     # another attribute or field with the same name, when the column name is
@@ -58,6 +60,8 @@ module ThinkingSphinx
       @sortable = options[:sortable] || false
       @infixes  = options[:infixes]  || false
       @prefixes = options[:prefixes] || false
+      @file     = options[:file]     || false
+      @with     = options[:with]
 
       source.fields << self
     end
@@ -69,12 +73,26 @@ module ThinkingSphinx
     # multiple data values (has_many or has_and_belongs_to_many associations).
     #
     def to_select_sql
+      return nil unless available?
+
       clause = columns_with_prefixes.join(', ')
 
       clause = adapter.concatenate(clause)       if concat_ws?
       #~ clause = adapter.group_concatenate(clause) if is_many?
 
       "#{clause} AS #{quote_column(unique_name)}"
+    end
+
+    def file?
+      @file
+    end
+
+    def with_attribute?
+      @with == :attribute
+    end
+
+    def with_wordcount?
+      @with == :wordcount
     end
   end
 end

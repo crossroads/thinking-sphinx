@@ -28,11 +28,19 @@ module ThinkingSphinx
     end
     
     def cast_to_datetime(clause)
-      "cast(extract(epoch from #{clause}) as int)"
+      if ThinkingSphinx::Configuration.instance.use_64_bit
+        "cast(extract(epoch from #{clause}) as bigint)"
+      else
+        "cast(extract(epoch from #{clause}) as int)"
+      end
     end
     
     def cast_to_unsigned(clause)
       clause
+    end
+    
+    def cast_to_int(clause)
+      "#{clause}::INT8"
     end
     
     def convert_nulls(clause, default = '')
@@ -65,6 +73,10 @@ module ThinkingSphinx
     
     def time_difference(diff)
       "current_timestamp - interval '#{diff} seconds'"
+    end
+    
+    def utc_query_pre
+      "SET TIME ZONE 'UTC'"
     end
     
     private
@@ -113,10 +125,16 @@ module ThinkingSphinx
           DECLARE tmp bigint;
           DECLARE i int;
           DECLARE j int;
+          DECLARE byte_length int;
           DECLARE word_array bytea;
           BEGIN
+            IF COALESCE(word, '') = '' THEN
+              return 0;
+            END IF;
+          
             i = 0;
             tmp = 4294967295;
+            byte_length = bit_length(word) / 8;
             word_array = decode(replace(word, E'\\\\', E'\\\\\\\\'), 'escape');
             LOOP
               tmp = (tmp # get_byte(word_array, i))::bigint;
@@ -129,13 +147,13 @@ module ThinkingSphinx
                   EXIT;
                 END IF;
               END LOOP;
-              IF i >= char_length(word) THEN
+              IF i >= byte_length THEN
                 EXIT;
               END IF;
             END LOOP;
             return (tmp # 4294967295);
           END
-        $$ IMMUTABLE STRICT LANGUAGE plpgsql;
+        $$ IMMUTABLE LANGUAGE plpgsql;
       SQL
       execute function, true
     end

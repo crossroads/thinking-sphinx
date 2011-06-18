@@ -49,28 +49,19 @@ module ThinkingSphinx
   class Configuration
     include Singleton
     
-    SourceOptions = %w( mysql_connect_flags mysql_ssl_cert mysql_ssl_key
-      mysql_ssl_ca sql_range_step sql_query_pre sql_query_post 
-      sql_query_killlist sql_ranged_throttle sql_query_post_index unpack_zlib
-      unpack_mysqlcompress unpack_mysqlcompress_maxsize )
+    SourceOptions = Riddle::Configuration::SQLSource.settings.map { |setting| setting.to_s }
+    IndexOptions  = Riddle::Configuration::Index.settings.map     { |setting| setting.to_s }
+    CustomOptions = %w( disable_range use_64_bit )
     
-    IndexOptions  = %w( charset_table charset_type charset_dictpath docinfo
-      enable_star exceptions html_index_attrs html_remove_elements html_strip
-      index_exact_words ignore_chars inplace_docinfo_gap inplace_enable
-      inplace_hit_gap inplace_reloc_factor inplace_write_factor min_infix_len
-      min_prefix_len min_stemming_len min_word_len mlock morphology ngram_chars
-      ngram_len ondisk_dict overshort_step phrase_boundary phrase_boundary_step
-      preopen stopwords stopwords_step wordforms )
-    
-    CustomOptions = %w( disable_range )
-        
     attr_accessor :searchd_file_path, :allow_star, :database_yml_file,
-      :app_root, :model_directories, :delayed_job_priority
+      :app_root, :model_directories, :delayed_job_priority, :indexed_models, :use_64_bit
     
     attr_accessor :source_options, :index_options
     attr_accessor :version
     
     attr_reader :environment, :configuration, :controller
+    
+    @@environment = nil
     
     # Load in the configuration settings - this will look for config/sphinx.yml
     # and parse it according to the current environment.
@@ -88,9 +79,10 @@ module ThinkingSphinx
       if custom_app_root
         self.app_root = custom_app_root
       else
-        self.app_root          = RAILS_ROOT if defined?(RAILS_ROOT)
-        self.app_root          = Merb.root  if defined?(Merb)
-        self.app_root        ||= app_root
+        self.app_root   = Merb.root                  if defined?(Merb)
+        self.app_root   = Sinatra::Application.root  if defined?(Sinatra)
+        self.app_root   = RAILS_ROOT                 if defined?(RAILS_ROOT)
+        self.app_root ||= app_root
       end
       
       @configuration = Riddle::Configuration.new
@@ -109,6 +101,7 @@ module ThinkingSphinx
       self.model_directories    = ["#{app_root}/app/models/"] +
         Dir.glob("#{app_root}/vendor/plugins/*/app/models/")
       self.delayed_job_priority = 0
+      self.indexed_models       = []
       
       self.source_options  = {}
       self.index_options   = {
@@ -123,19 +116,37 @@ module ThinkingSphinx
     end
     
     def self.environment
-      Thread.current[:thinking_sphinx_environment] ||= begin
-        if defined?(Merb)
-          Merb.environment
-        elsif defined?(RAILS_ENV)
-          RAILS_ENV
-        else
-          ENV['RAILS_ENV'] || 'development'
-        end
+      @@environment ||= if defined?(Merb)
+        Merb.environment
+      elsif defined?(RAILS_ENV)
+        RAILS_ENV
+      elsif defined?(Sinatra)
+        Sinatra::Application.environment.to_s
+      else
+        ENV['RAILS_ENV'] || 'development'
+      end
+    end
+    
+    def self.reset_environment
+      ThinkingSphinx.mutex.synchronize do
+        @@environment = nil
       end
     end
     
     def environment
       self.class.environment
+    end
+    
+    def generate
+      @configuration.indexes.clear
+      
+      ThinkingSphinx.context.indexed_models.each do |model|
+        model = model.constantize
+        model.define_indexes
+        @configuration.indexes.concat model.to_riddle
+        
+        enforce_common_attribute_types
+      end
     end
     
     # Generate the config file for Sphinx by using all the settings defined and
@@ -145,13 +156,7 @@ module ThinkingSphinx
     def build(file_path=nil)
       file_path ||= "#{self.config_file}"
       
-      @configuration.indexes.clear
-      
-      ThinkingSphinx.context.indexed_models.each do |model|
-        model = model.constantize
-        model.define_indexes
-        @configuration.indexes.concat model.to_riddle
-      end
+      generate
       
       open(file_path, "w") do |file|
         file.write @configuration.render
@@ -232,9 +237,13 @@ module ThinkingSphinx
       @controller.indexer_binary_name = name
     end
     
+    attr_accessor :timeout
+
     def client
-      client = Riddle::Client.new address, port
+      client = Riddle::Client.new address, port,
+        configuration.searchd.client_key
       client.max_matches = configuration.searchd.max_matches || 1000
+      client.timeout = timeout || 0
       client
     end
     
@@ -286,6 +295,27 @@ module ThinkingSphinx
         object.send("#{key}=", value) if object.respond_to?("#{key}")
         send("#{key}=", value) if self.respond_to?("#{key}")
       end
+    end
+    
+    def enforce_common_attribute_types
+      sql_indexes = configuration.indexes.reject { |index|
+        index.is_a? Riddle::Configuration::DistributedIndex
+      }
+      
+      return unless sql_indexes.any? { |index|
+        index.sources.any? { |source|
+          source.sql_attr_bigint.include? :sphinx_internal_id
+        }
+      }
+      
+      sql_indexes.each { |index|
+        index.sources.each { |source|
+          next if source.sql_attr_bigint.include? :sphinx_internal_id
+          
+          source.sql_attr_bigint << :sphinx_internal_id
+          source.sql_attr_uint.delete :sphinx_internal_id
+        }
+      }
     end
   end
 end

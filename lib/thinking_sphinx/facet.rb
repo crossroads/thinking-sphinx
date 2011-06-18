@@ -1,9 +1,10 @@
 module ThinkingSphinx
   class Facet
-    attr_reader :property
+    attr_reader :property, :value_source
     
-    def initialize(property)
-      @property = property
+    def initialize(property, value_source = nil)
+      @property     = property
+      @value_source = value_source
       
       if property.columns.length != 1
         raise "Can't translate Facets on multiple-column field or attribute"
@@ -15,6 +16,7 @@ module ThinkingSphinx
       when Facet
         facet.name
       when String, Symbol
+        return :class if facet.to_s == 'sphinx_internal_class'
         facet.to_s.gsub(/(_facet|_crc)$/,'').to_sym
       end
     end
@@ -71,7 +73,12 @@ module ThinkingSphinx
       @property.is_a?(Field) ? :string : @property.type
     end
     
-    def value(object, attribute_value)
+    def float?
+      @property.type == :float
+    end
+    
+    def value(object, attribute_hash)
+      attribute_value = attribute_hash['@groupby']
       return translate(object, attribute_value) if translate? || float?
       
       case @property.type
@@ -92,15 +99,15 @@ module ThinkingSphinx
     
     def translate(object, attribute_value)
       objects = source_objects(object)
-      return nil if objects.nil? || objects.empty?
-      
-      if objects.length > 1
-        objects.collect { |item| item.send(column.__name) }.detect { |item|
-          item.to_crc32 == attribute_value
-        }
-      else
-        objects.first.send(column.__name)
-      end
+      return if objects.blank?
+
+      method = value_source || column.__name
+      object = objects.one? ? objects.first : objects.detect { |item|
+        result = item.send(method)
+        result && result.to_crc32 == attribute_value
+      }
+
+      object.try(method)
     end
     
     def source_objects(object)
@@ -116,10 +123,6 @@ module ThinkingSphinx
     
     def column
       @property.columns.first
-    end
-    
-    def float?
-      @property.type == :float
     end
   end
 end

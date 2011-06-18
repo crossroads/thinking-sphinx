@@ -6,6 +6,10 @@ class Riddle::AutoVersion
     case version
     when '0.9.8', '0.9.9'
       require "riddle/#{version}"
+    when /1.10/
+      require 'riddle/1.10'
+    when /2.0.\d/
+      require 'riddle/2.0.1'
     end
   end
 end

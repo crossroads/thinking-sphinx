@@ -1,9 +1,9 @@
-require 'spec/spec_helper'
+require 'spec_helper'
 
 describe ThinkingSphinx::Configuration do
   describe "environment class method" do
     before :each do
-      Thread.current[:thinking_sphinx_environment] = nil
+      ThinkingSphinx::Configuration.reset_environment
       
       ENV["RAILS_ENV"] = nil
     end
@@ -87,7 +87,8 @@ describe ThinkingSphinx::Configuration do
           "ignore_chars"      => "e",
           "searchd_binary_name" => "sphinx-searchd",
           "indexer_binary_name" => "sphinx-indexer",
-          "index_exact_words" => true
+          "index_exact_words" => true,
+          "indexed_models"    => ['Alpha', 'Beta']
         }
       }
 
@@ -117,6 +118,8 @@ describe ThinkingSphinx::Configuration do
         config.app_root = "/here/somewhere"
       end
       ThinkingSphinx::Configuration.instance.app_root.should == "/here/somewhere"
+      
+      ThinkingSphinx::Configuration.instance.reset
     end
   end
 
@@ -228,12 +231,30 @@ describe ThinkingSphinx::Configuration do
     file.should_not match(/index alpha_core\s+\{\s+[^\}]*prefix_fields\s+=[^\}]*\}/m)
   end
   
+  describe '#generate' do
+    let(:config) { ThinkingSphinx::Configuration.instance }
+    
+    it "should set all sphinx_internal_id attributes to bigints if one is" do
+      config.reset
+      config.generate
+      
+      config.configuration.indexes.each do |index|
+        next if index.is_a? Riddle::Configuration::DistributedIndex
+        
+        index.sources.each do |source|
+          source.sql_attr_bigint.should include(:sphinx_internal_id)
+        end
+      end
+    end
+  end
+  
   describe '#client' do
     before :each do
       @config = ThinkingSphinx::Configuration.instance
       @config.address     = 'domain.url'
       @config.port        = 3333
       @config.configuration.searchd.max_matches = 100
+      @config.timeout = 1
     end
     
     it "should return an instance of Riddle::Client" do
@@ -250,6 +271,10 @@ describe ThinkingSphinx::Configuration do
     
     it "should use the configuration max matches" do
       @config.client.max_matches.should == 100
+    end
+
+    it "should use the configuration timeout" do
+      @config.client.timeout.should == 1
     end
   end
   

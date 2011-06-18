@@ -10,9 +10,11 @@ module ThinkingSphinx
 
       raise "Cannot define a field or attribute in #{source.model.name} with no columns. Maybe you are trying to index a field with a reserved name (id, name). You can fix this error by using a symbol rather than a bare name (:id instead of id)." if @columns.empty? || @columns.any? { |column| !column.respond_to?(:__stack) }
 
-      @alias    = options[:as]
-      @faceted  = options[:facet]
-      @admin    = options[:admin]
+      @alias        = options[:as]
+      @faceted      = options[:facet]
+      @admin        = options[:admin]
+      @sortable     = options[:sortable] || false
+      @value_source = options[:value]
 
       @alias    = @alias.to_sym unless @alias.blank?
 
@@ -40,7 +42,7 @@ module ThinkingSphinx
     def to_facet
       return nil unless @faceted
 
-      ThinkingSphinx::Facet.new(self)
+      ThinkingSphinx::Facet.new(self, @value_source)
     end
 
     # Get the part of the GROUP BY clause related to this attribute - if one is
@@ -75,6 +77,10 @@ module ThinkingSphinx
 
     def public?
       !admin
+    end
+
+    def available?
+      columns.any? { |column| column_available?(column) }
     end
 
     private
@@ -128,9 +134,11 @@ module ThinkingSphinx
     # figure out how to correctly reference a column in SQL.
     #
     def column_with_prefix(column)
+      return nil unless column_available?(column)
+
       if column.is_string?
         column.__name
-      elsif associations[column].empty?
+      elsif column.__stack.empty?
         "#{@model.quoted_table_name}.#{quote_column(column.__name)}"
       else
         associations[column].collect { |assoc|
@@ -144,7 +152,17 @@ module ThinkingSphinx
     def columns_with_prefixes
       @columns.collect { |column|
         column_with_prefix column
-      }.flatten
+      }.flatten.compact
+    end
+
+    def column_available?(column)
+      if column.is_string?
+        true
+      elsif column.__stack.empty?
+        @model.column_names.include?(column.__name.to_s)
+      else
+        associations[column].any? { |assoc| assoc.has_column?(column.__name) }
+      end
     end
 
     # Gets a stack of associations for a specific path.

@@ -1,5 +1,5 @@
-require 'features/support/models/tag'
-require 'features/support/models/tagging'
+require "#{File.dirname(__FILE__)}/tag"
+require "#{File.dirname(__FILE__)}/tagging"
 
 class Developer < ActiveRecord::Base
   has_many :taggings, :as => :taggable
@@ -9,8 +9,13 @@ class Developer < ActiveRecord::Base
     indexes country,                      :facet => true
     indexes state,                        :facet => true
     indexes tags.text,  :as => :tags,     :facet => true
+    
     has age,                              :facet => true
     has tags(:id),      :as => :tag_ids,  :facet => true
-    facet city
+    has state,          :as => :state_wordcount, :type => :wordcount
+    
+    facet "LOWER(city)", :as => :city, :type => :string, :value => :city
+    
+    group_by 'city'
   end
 end

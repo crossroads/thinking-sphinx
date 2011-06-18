@@ -2,16 +2,25 @@ require 'socket'
 require 'timeout'
 
 module Riddle #:nodoc:
+  @@mutex          = Mutex.new
+  @@escape_pattern = /[\(\)\|\-!@~"&\/]/
+  
   class ConnectionError < StandardError #:nodoc:
     #
   end
   
+  def self.mutex
+    @@mutex
+  end
+  
   def self.escape_pattern
-    Thread.current[:riddle_escape_pattern] ||= /[\(\)\|\-!@~"&\/]/
+    @@escape_pattern
   end
   
   def self.escape_pattern=(pattern)
-    Thread.current[:riddle_escape_pattern] = pattern
+    mutex.synchronize do
+      @@escape_pattern = pattern
+    end
   end
   
   def self.escape(string)
@@ -37,6 +46,8 @@ lines after "require 'riddle'" to avoid this warning.
   require 'riddle/0.9.8'
   # or
   require 'riddle/0.9.9'
+  # or
+  require 'riddle/1.10'
 
     }
   end
@@ -46,6 +57,7 @@ require 'riddle/auto_version'
 require 'riddle/client'
 require 'riddle/configuration'
 require 'riddle/controller'
+require 'riddle/query'
 
 Riddle.loaded_version = nil
 Riddle::AutoVersion.configure

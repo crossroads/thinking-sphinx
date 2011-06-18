@@ -119,13 +119,13 @@ module ThinkingSphinx
       # database.
       # 
       # Attributes are limited to the following types: integers, floats,
-      # datetimes (converted to timestamps), booleans and strings. Don't
-      # forget that Sphinx converts string attributes to integers, which are
-      # useful for sorting, but that's about it.
+      # datetimes (converted to timestamps), booleans, strings and MVAs
+      # (:multi). Don't forget that Sphinx converts string attributes to
+      # integers, which are useful for sorting, but that's about it.
       # 
-      # You can also have a collection of integers for multi-value attributes
-      # (MVAs). Generally these would be through a has_many relationship,
-      # like in this example:
+      # Collection of integers are known as multi-value attributes (MVAs).
+      # Generally these would be through a has_many relationship, like in this
+      # example:
       # 
       #   has posts(:id), :as => :post_ids
       # 
@@ -161,6 +161,12 @@ module ThinkingSphinx
           attribute = Attribute.new(source, FauxColumn.coerce(columns), options)
           
           add_facet_attribute attribute, options
+        end
+      end
+      
+      def join(*args)
+        args.each do |association|
+          Join.new(source, association)
         end
       end
       
@@ -243,6 +249,16 @@ module ThinkingSphinx
       # 
       def assoc(assoc, *args)
         FauxColumn.new(assoc, *args)
+      end
+      
+      # Use this method to generate SQL for your attributes, conditions, etc.
+      # You can pass in as whatever ActiveRecord::Base.sanitize_sql accepts.
+      # 
+      #   where sanitize_sql(["active = ?", true])
+      #   #=> WHERE active = 1
+      # 
+      def sanitize_sql(*args)
+        @index.model.send(:sanitize_sql, *args)
       end
       
       private

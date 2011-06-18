@@ -42,6 +42,7 @@ end
 
 class Person < ActiveRecord::Base
   belongs_to :team, :polymorphic => :true
+  belongs_to :source, :polymorphic => :true
   has_many :contacts
   
   has_many :friendships
@@ -96,6 +97,7 @@ end
 
 class Alpha < ActiveRecord::Base
   has_many :betas
+  has_many :thetas
   
   define_index do
     indexes :name, :sortable => true
@@ -108,10 +110,6 @@ class Alpha < ActiveRecord::Base
   
   def big_name
     name.upcase
-  end
-  
-  def string_to_escape
-    'test "escaping" <characters>'
   end
   
   def sphinx_attributes
@@ -144,6 +142,16 @@ class Gamma < ActiveRecord::Base
   #
 end
 
+class Theta < ActiveRecord::Base
+  #
+end
+
 class Search < ActiveRecord::Base
   #
+end
+
+class BigFoo < ActiveRecord::Base
+  define_index do
+    indexes name
+  end
 end

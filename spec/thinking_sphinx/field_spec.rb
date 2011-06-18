@@ -1,4 +1,4 @@
-require 'spec/spec_helper'
+require 'spec_helper'
 
 describe ThinkingSphinx::Field do
   before :each do
@@ -44,6 +44,17 @@ describe ThinkingSphinx::Field do
       @field.unique_name.should == "col_name"
     end
   end
+  
+  describe '#to_select_sql' do
+    it "should return nil if polymorphic association data does not exist" do
+      field = ThinkingSphinx::Field.new(@source,
+        [ThinkingSphinx::Index::FauxColumn.new(:source, :name)],
+        :as => :source_name
+      )
+      
+      field.to_select_sql.should be_nil
+    end
+  end
 
   describe "prefixes method" do
     it "should default to false" do
@@ -79,15 +90,18 @@ describe ThinkingSphinx::Field do
   
   describe "is_many? method" do
     before :each do
-      @assoc_a = stub('assoc', :is_many? => true)
-      @assoc_b = stub('assoc', :is_many? => true)
-      @assoc_c = stub('assoc', :is_many? => true)
+      @assoc_a = ThinkingSphinx::Association.new(nil, nil)
+      @assoc_b = ThinkingSphinx::Association.new(nil, nil)
+      @assoc_c = ThinkingSphinx::Association.new(nil, nil)
       
       @field = ThinkingSphinx::Field.new(
         @source, [ThinkingSphinx::Index::FauxColumn.new(:col_name)]
       )
       @field.associations = {
         :a => @assoc_a, :b => @assoc_b, :c => @assoc_c
+      }
+      @field.associations.values.each { |assoc|
+        assoc.stub!(:is_many? => true)
       }
     end
     

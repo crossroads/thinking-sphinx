@@ -1,4 +1,4 @@
-require 'spec/spec_helper'
+require 'spec_helper'
 
 describe ThinkingSphinx::Facet do
   describe ".name_for" do
@@ -291,13 +291,13 @@ describe ThinkingSphinx::Facet do
         person      = Person.find(:first)
         friendship  = Friendship.new(:person => person)
       
-        @facet.value(friendship, 1).should == person.first_name
+        @facet.value(friendship, {'first_name_facet' => 1}).should == person.first_name
       end
     
       it "should return nil if the association is nil" do
         friendship = Friendship.new(:person => nil)
       
-        @facet.value(friendship, 1).should be_nil
+        @facet.value(friendship, {'first_name_facet' => 1}).should be_nil
       end
       
       it "should return multi-level association values" do
@@ -308,8 +308,20 @@ describe ThinkingSphinx::Facet do
         field  = ThinkingSphinx::Field.new(
           @source, ThinkingSphinx::Index::FauxColumn.new(:person, :tags, :name)
         )
-        ThinkingSphinx::Facet.new(field).value(friendship, 'buried'.to_crc32).
+        ThinkingSphinx::Facet.new(field).value(friendship, {'name_facet' => 'buried'.to_crc32}).
           should == 'buried'
+      end
+      
+      it "should not error with multi-level association values containing a nil value" do
+        person      = Person.find(:first)
+        tag         = person.tags.build(:name => nil)
+        tag         = person.tags.build(:name => "buried")
+        friendship  = Friendship.new(:person => person)
+        
+        field  = ThinkingSphinx::Field.new(
+          @source, ThinkingSphinx::Index::FauxColumn.new(:person, :tags, :name)
+        )
+        lambda{ThinkingSphinx::Facet.new(field).value(friendship, {'name_facet' => 'buried'.to_crc32})}.should_not raise_error
       end
     end
     
@@ -326,7 +338,21 @@ describe ThinkingSphinx::Facet do
       it "should translate using the given model" do
         alpha = Alpha.new(:cost => 10.5)
       
-        @facet.value(alpha, 1093140480).should == 10.5
+        @facet.value(alpha, {'cost' => 1093140480}).should == 10.5
+      end
+    end
+    
+    context 'manual value source' do
+      let(:index)  { ThinkingSphinx::Index.new(Alpha) }
+      let(:source) { ThinkingSphinx::Source.new(index) }
+      let(:column) { ThinkingSphinx::Index::FauxColumn.new('LOWER(name)') }
+      let(:field)  { ThinkingSphinx::Field.new(source, column) }
+      let(:facet)  { ThinkingSphinx::Facet.new(field, :name) }
+      
+      it "should use the given value source to figure out the value" do
+        alpha = Alpha.new(:name => 'Foo')
+        
+        facet.value(alpha, {'foo_facet' => 'foo'.to_crc32}).should == 'Foo'
       end
     end
   end

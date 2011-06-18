@@ -1,4 +1,4 @@
-require 'spec/spec_helper'
+require 'spec_helper'
 
 describe ThinkingSphinx::Source do
   before :each do
@@ -47,6 +47,14 @@ describe ThinkingSphinx::Source do
       ThinkingSphinx::Attribute.new(
         @source, ThinkingSphinx::Index::FauxColumn.new(:contacts, :id),
         :as => :contact_ids, :source => :query
+      )
+      ThinkingSphinx::Attribute.new(
+        @source, ThinkingSphinx::Index::FauxColumn.new(:source, :id),
+        :as => :source_id, :type => :integer
+      )
+      
+      ThinkingSphinx::Join.new(
+        @source, ThinkingSphinx::Index::FauxColumn.new(:links)
       )
       
       @source.conditions << "`birthday` <= NOW()"
@@ -99,6 +107,12 @@ describe ThinkingSphinx::Source do
       @riddle.sql_attr_timestamp.first.should == :birthday
     end
     
+    it "should not include an attribute definition for polymorphic references without data" do
+      @riddle.sql_attr_uint.select { |uint|
+        uint == :source_id
+      }.should be_empty
+    end
+    
     it "should set Sphinx Source options" do
       @riddle.sql_range_step.should      == 1000
       @riddle.sql_ranged_throttle.should == 100
@@ -134,6 +148,10 @@ describe ThinkingSphinx::Source do
       
       it "should not include joins for the sourced MVA attribute" do
         @query.should_not match(/LEFT OUTER JOIN `contacts`/)
+      end
+      
+      it "should include explicitly requested joins" do
+        @query.should match(/LEFT OUTER JOIN `links`/)
       end
       
       it "should include any defined conditions" do

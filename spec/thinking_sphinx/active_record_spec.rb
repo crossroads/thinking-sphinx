@@ -1,4 +1,4 @@
-require 'spec/spec_helper'
+require 'spec_helper'
 
 describe ThinkingSphinx::ActiveRecord do
   before :each do
@@ -149,7 +149,7 @@ describe ThinkingSphinx::ActiveRecord do
         Beta.should_receive(:before_save).with(:toggle_delta).once
 
         Beta.define_index { indexes :name }
-        Beta.define_index {
+        Beta.define_index('foo') {
           indexes :name
           set_property :delta => true
         }
@@ -193,7 +193,7 @@ describe ThinkingSphinx::ActiveRecord do
         Beta.should_receive(:after_commit).with(:index_delta).once
 
         Beta.define_index { indexes :name }
-        Beta.define_index {
+        Beta.define_index('foo') {
           indexes :name
           set_property :delta => true
         }
@@ -232,50 +232,6 @@ describe ThinkingSphinx::ActiveRecord do
       Beta.define_indexes
       
       Beta.sphinx_indexes.length.should == 1
-    end
-  end
-  
-  describe "index methods" do
-    before(:all) do
-      @person = Person.find(:first)
-    end
-
-    describe "in_both_indexes?" do
-      it "should return true if in core and delta indexes" do
-        @person.should_receive(:in_core_index?).and_return(true)
-        @person.should_receive(:in_delta_index?).and_return(true)
-        @person.in_both_indexes?.should be_true
-      end
-      
-      it "should return false if in one index and not the other" do
-        @person.should_receive(:in_core_index?).and_return(true)
-        @person.should_receive(:in_delta_index?).and_return(false)
-        @person.in_both_indexes?.should be_false
-      end
-    end
-
-    describe "in_core_index?" do
-      it "should call in_index? with core" do
-        @person.should_receive(:in_index?).with('core')
-        @person.in_core_index?
-      end
-    end
-
-    describe "in_delta_index?" do
-      it "should call in_index? with delta" do
-        @person.should_receive(:in_index?).with('delta')
-        @person.in_delta_index?
-      end
-    end
-
-    describe "in_index?" do
-      it "should return true if in the specified index" do
-        @person.should_receive(:sphinx_document_id).and_return(1)
-        @person.should_receive(:sphinx_index_name).and_return('person_core')
-        Person.should_receive(:search_for_id).with(1, 'person_core').and_return(true)
-      
-        @person.in_index?('core').should be_true
-      end
     end
   end
 
@@ -433,6 +389,10 @@ describe ThinkingSphinx::ActiveRecord do
     end
     
     after :each do
+      Person.clear_primary_key_for_sphinx
+    end
+    
+    after :each do
       Person.set_sphinx_primary_key nil
     end
     
@@ -449,6 +409,12 @@ describe ThinkingSphinx::ActiveRecord do
       id = @person.id
       @person.stub!(:id => 'unique_hash')
       @person.primary_key_for_sphinx.should == id
+    end
+    
+    it "should be inherited by subclasses" do
+      Person.set_sphinx_primary_key :first_name
+      Parent.superclass.custom_primary_key_for_sphinx?
+      Parent.primary_key_for_sphinx.should == Person.primary_key_for_sphinx
     end
   end
   
@@ -541,11 +507,9 @@ describe ThinkingSphinx::ActiveRecord do
   
   describe '.core_index_names' do
     it "should return each index's core name" do
-      Alpha.define_index { indexes :name }
-      Alpha.define_index { indexes :name }
+      Alpha.define_index('foo') { indexes :name }
+      Alpha.define_index('bar') { indexes :name }
       Alpha.define_indexes
-      Alpha.sphinx_indexes.first.name = 'foo'
-      Alpha.sphinx_indexes.last.name = 'bar'
       
       Alpha.core_index_names.should == ['foo_core', 'bar_core']
     end
@@ -553,12 +517,10 @@ describe ThinkingSphinx::ActiveRecord do
   
   describe '.delta_index_names' do
     it "should return index delta names, for indexes with deltas enabled" do
-      Alpha.define_index { indexes :name }
-      Alpha.define_index { indexes :name }
+      Alpha.define_index('foo') { indexes :name }
+      Alpha.define_index('bar') { indexes :name }
       Alpha.define_indexes
-      Alpha.sphinx_indexes.first.name = 'foo'
       Alpha.sphinx_indexes.first.delta_object = stub('delta')
-      Alpha.sphinx_indexes.last.name = 'bar'
       
       Alpha.delta_index_names.should == ['foo_delta']
     end

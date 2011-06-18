@@ -1,6 +1,3 @@
-require 'yard'
-require 'jeweler'
-
 desc 'Generate documentation'
 YARD::Rake::YardocTask.new
 
@@ -23,13 +20,11 @@ Jeweler::Tasks.new do |gem|
     "VERSION"
   ]
   gem.test_files = FileList[
-    "features/**/*",
+    "features/**/*.rb",
+    "features/**/*.feature",
+    "features/**/*.example.yml",
     "spec/**/*_spec.rb"
   ]
-
-  gem.add_dependency 'activerecord', '>= 1.15.6'
-  gem.add_dependency 'riddle',       '>= 1.0.10'
-  gem.add_dependency 'after_commit', '>= 1.0.6'
 
   gem.post_install_message = <<-MESSAGE
 If you're upgrading, you should read this:

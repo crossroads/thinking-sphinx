@@ -58,7 +58,7 @@ FROM #{ @model.quoted_table_name }
       end
 
       def sql_select_clause(offset)
-        unique_id_expr = ThinkingSphinx.unique_id_expression(offset)
+        unique_id_expr = ThinkingSphinx.unique_id_expression(adapter, offset)
 
         (
           ["#{@model.quoted_table_name}.#{quote_column(@model.primary_key_for_sphinx)} #{unique_id_expr} AS #{quote_column(@model.primary_key_for_sphinx)} "] +
@@ -116,13 +116,38 @@ FROM #{ @model.quoted_table_name }
         if @model.table_exists? &&
           @model.column_names.include?(@model.inheritance_column)
 
-          adapter.cast_to_unsigned(adapter.convert_nulls(
-            adapter.crc(adapter.quote_with_table(@model.inheritance_column), true),
-            @model.to_crc32
-          ))
+          types = types_to_crcs
+          return @model.to_crc32.to_s if types.empty?
+
+          adapter.case(adapter.convert_nulls(
+            adapter.quote_with_table(@model.inheritance_column)),
+            types_to_crcs, @model.to_crc32)
         else
           @model.to_crc32.to_s
         end
+      end
+
+      def internal_class_column
+        if @model.table_exists? &&
+          @model.column_names.include?(@model.inheritance_column)
+          adapter.quote_with_table(@model.inheritance_column)
+        else
+          "'#{@model.name}'"
+        end
+      end
+
+      def type_values
+        @model.connection.select_values <<-SQL
+SELECT DISTINCT #{@model.inheritance_column}
+FROM #{@model.table_name}
+        SQL
+      end
+
+      def types_to_crcs
+        type_values.compact.inject({}) { |hash, type|
+          hash[type] = type.to_crc32
+          hash
+        }
       end
     end
   end

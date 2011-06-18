@@ -20,13 +20,13 @@ module ThinkingSphinx
       end
       
       def toggle(instance)
-        instance.delta = true
+        instance.send "#{@column}=", true
       end
-      
+
       def toggled(instance)
-        instance.delta
+        instance.send "#{@column}"
       end
-      
+
       def reset_query(model)
         "UPDATE #{model.quoted_table_name} SET " +
         "#{model.connection.quote_column_name(@column.to_s)} = #{adapter.boolean(false)} " +
@@ -44,7 +44,7 @@ module ThinkingSphinx
         config = ThinkingSphinx::Configuration.instance
         rotate = ThinkingSphinx.sphinx_running? ? "--rotate" : ""
         
-        output = `#{config.bin_path}#{config.indexer_binary_name} --config '#{config.config_file}' #{rotate} #{model.delta_index_names.join(' ')}`
+        output = `#{config.bin_path}#{config.indexer_binary_name} --config "#{config.config_file}" #{rotate} #{model.delta_index_names.join(' ')}`
         puts(output) unless ThinkingSphinx.suppress_delta_output?
       end
       

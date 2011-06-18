@@ -28,6 +28,10 @@ module ThinkingSphinx
       "CAST(#{clause} AS UNSIGNED)"
     end
     
+    def cast_to_int(clause)
+      "CAST(#{clause} AS SIGNED)"
+    end
+    
     def convert_nulls(clause, default = '')
       default = "'#{default}'" if default.is_a?(String)
       
@@ -49,6 +53,10 @@ module ThinkingSphinx
     
     def time_difference(diff)
       "DATE_SUB(NOW(), INTERVAL #{diff} SECOND)"
+    end
+    
+    def utc_query_pre
+      "SET TIME_ZONE = '+0:00'"
     end
   end
 end

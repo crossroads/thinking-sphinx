@@ -1,4 +1,4 @@
-require 'spec/spec_helper'
+require 'spec_helper'
 
 describe ThinkingSphinx do
   describe '.context' do
@@ -23,10 +23,10 @@ describe ThinkingSphinx do
       ThinkingSphinx.reset_context!
       ThinkingSphinx.context.should_not == existing
       
-      Thread.current[:thinking_sphinx_context] = existing
+      ThinkingSphinx.reset_context! existing
     end
   end
-  
+    
   describe '.define_indexes?' do
     it "should define indexes by default" do
       ThinkingSphinx.define_indexes?.should be_true
@@ -49,7 +49,6 @@ describe ThinkingSphinx do
   
   describe '.deltas_enabled?' do
     it "should index deltas by default" do
-      ThinkingSphinx.deltas_enabled = nil
       ThinkingSphinx.deltas_enabled?.should be_true
     end
   end
@@ -134,7 +133,7 @@ describe ThinkingSphinx do
         :connection => @connection
       )
       
-      Thread.current[:thinking_sphinx_use_group_by_shortcut] = nil
+      ThinkingSphinx.reset_use_group_by_shortcut
     end
     
     it "should return true if no ONLY_FULL_GROUP_BY" do
@@ -150,6 +149,15 @@ describe ThinkingSphinx do
         :select_all => {:a => nil}
       )
       
+      ThinkingSphinx.use_group_by_shortcut?.should be_true
+    end
+
+    it "should return true if using mysql2 gem" do
+      @connection.stub!(
+        :class => ActiveRecord::ConnectionAdapters::Mysql2Adapter,
+        :select_all => {:a => ""}
+      )
+
       ThinkingSphinx.use_group_by_shortcut?.should be_true
     end
   
