@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.version = "1.4.6"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["Pat Allan"]
-  s.date = %q{2011-05-25}
+  s.authors = [%q{Pat Allan}]
+  s.date = %q{2011-07-14}
   s.description = %q{A concise and easy-to-use Ruby library that connects ActiveRecord to the Sphinx search daemon, managing configuration, indexing and searching.}
   s.email = %q{pat@freelancing-gods.com}
   s.extra_rdoc_files = [
@@ -71,8 +71,8 @@ Gem::Specification.new do |s|
 http://freelancing-god.github.com/ts/en/upgrading.html
 
 }
-  s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.6.2}
+  s.require_paths = [%q{lib}]
+  s.rubygems_version = %q{1.8.5}
   s.summary = %q{ActiveRecord/Rails Sphinx library}
   s.test_files = [
     "features/abstract_inheritance.feature",
@@ -200,6 +200,7 @@ http://freelancing-god.github.com/ts/en/upgrading.html
       s.add_runtime_dependency(%q<riddle>, [">= 1.3.3"])
       s.add_runtime_dependency(%q<after_commit>, [">= 1.0.7"])
       s.add_development_dependency(%q<mysql>, ["= 2.8.1"])
+      s.add_development_dependency(%q<mysql2>, ["= 0.2.7"])
       s.add_development_dependency(%q<pg>, ["= 0.9.0"])
       s.add_development_dependency(%q<jeweler>, ["= 1.5.1"])
       s.add_development_dependency(%q<yard>, ["= 0.6.8"])
@@ -217,6 +218,7 @@ http://freelancing-god.github.com/ts/en/upgrading.html
       s.add_dependency(%q<riddle>, [">= 1.3.3"])
       s.add_dependency(%q<after_commit>, [">= 1.0.7"])
       s.add_dependency(%q<mysql>, ["= 2.8.1"])
+      s.add_dependency(%q<mysql2>, ["= 0.2.7"])
       s.add_dependency(%q<pg>, ["= 0.9.0"])
       s.add_dependency(%q<jeweler>, ["= 1.5.1"])
       s.add_dependency(%q<yard>, ["= 0.6.8"])
@@ -235,6 +237,7 @@ http://freelancing-god.github.com/ts/en/upgrading.html
     s.add_dependency(%q<riddle>, [">= 1.3.3"])
     s.add_dependency(%q<after_commit>, [">= 1.0.7"])
     s.add_dependency(%q<mysql>, ["= 2.8.1"])
+    s.add_dependency(%q<mysql2>, ["= 0.2.7"])
     s.add_dependency(%q<pg>, ["= 0.9.0"])
     s.add_dependency(%q<jeweler>, ["= 1.5.1"])
     s.add_dependency(%q<yard>, ["= 0.6.8"])

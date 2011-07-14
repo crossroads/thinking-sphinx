@@ -2,7 +2,7 @@ desc 'Generate documentation'
 YARD::Rake::YardocTask.new
 
 Jeweler::Tasks.new do |gem|
-  gem.name        = "warp-thinking-sphinx"
+  gem.name        = "thinking-sphinx"
   gem.summary     = "ActiveRecord/Rails Sphinx library"
   gem.description = "A concise and easy-to-use Ruby library that connects ActiveRecord to the Sphinx search daemon, managing configuration, indexing and searching."
   gem.author      = "Pat Allan"
